@@ -322,3 +322,39 @@ def export_session():
     except Exception as e:
         print(f"❌ Erro ao exportar sessão: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+@brainstorm_bp.route('/update-card-position', methods=['POST'])
+def update_card_position():
+    """Atualiza apenas a posição de uma carta (para drag & drop)"""
+    try:
+        data = request.get_json() or {}
+        
+        if not data.get('card_id'):
+            return jsonify({'success': False, 'error': 'card_id é obrigatório'}), 400
+        
+        card = Card.query.get(data['card_id'])
+        if not card:
+            return jsonify({'success': False, 'error': 'Card não encontrado'}), 404
+        
+        # Atualizar apenas posição
+        if 'position_x' in data:
+            card.position_x = data['position_x']
+        if 'position_y' in data:
+            card.position_y = data['position_y']
+        
+        # Atualizar timestamp se existir
+        if hasattr(card, 'updated_at'):
+            card.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'card_id': card.id,
+            'position_x': card.position_x,
+            'position_y': card.position_y
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro ao atualizar posição do card: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
