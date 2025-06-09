@@ -1,0 +1,165 @@
+<!-- templates/home/index.html - Página Inicial -->
+{% extends "base.html" %}
+
+{% block title %}Início - Sistema de Design de Jogos Educativos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Hero Section -->
+        <div class="text-center mb-5">
+            <h1 class="display-4 mb-4">
+                <i class="fas fa-gamepad text-primary"></i>
+                Sistema de Design de Jogos Educativos
+            </h1>
+            <p class="lead">
+                Uma abordagem com multiagentes baseados em LLMs para o design de jogos educativos
+            </p>
+            <hr class="my-4">
+        </div>
+
+        <!-- Introduction -->
+        <div class="row mb-5">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-robot text-info"></i> 
+                            Inteligência Artificial
+                        </h5>
+                        <p class="card-text">
+                            Sistema integrado com LLMs (Large Language Models) que atuam como agentes especializados 
+                            para auxiliar no processo de design de jogos educativos.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-users text-success"></i> 
+                            Multiagentes
+                        </h5>
+                        <p class="card-text">
+                            Diferentes agentes especializados trabalham em conjunto: agente de brainstorming, 
+                            agente socrático, especialista em Bloom e agentes de design.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Process Overview -->
+        <div class="card mb-5">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-route"></i> 
+                    Processo de Design
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 text-center mb-3">
+                        <div class="bg-primary text-white p-3 rounded mb-2">
+                            <i class="fas fa-lightbulb fa-2x"></i>
+                        </div>
+                        <h6>1. Brainstorming</h6>
+                        <small class="text-muted">Geração de ideias com auxílio de IA</small>
+                    </div>
+                    <div class="col-md-3 text-center mb-3">
+                        <div class="bg-info text-white p-3 rounded mb-2">
+                            <i class="fas fa-question-circle fa-2x"></i>
+                        </div>
+                        <h6>2. Reflexão Socrática</h6>
+                        <small class="text-muted">Análise crítica das ideias</small>
+                    </div>
+                    <div class="col-md-3 text-center mb-3">
+                        <div class="bg-success text-white p-3 rounded mb-2">
+                            <i class="fas fa-graduation-cap fa-2x"></i>
+                        </div>
+                        <h6>3. Taxonomia de Bloom</h6>
+                        <small class="text-muted">Definição de objetivos educacionais</small>
+                    </div>
+                    <div class="col-md-3 text-center mb-3">
+                        <div class="bg-warning text-white p-3 rounded mb-2">
+                            <i class="fas fa-pencil-ruler fa-2x"></i>
+                        </div>
+                        <h6>4. Game Design Canvas</h6>
+                        <small class="text-muted">Estruturação do projeto</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="row mb-5">
+            <div class="col-md-4 mb-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <i class="fas fa-brain fa-3x text-primary mb-3"></i>
+                        <h6>Método Socrático</h6>
+                        <p class="card-text small">
+                            Aplicação de questionamentos estruturados para reflexão crítica sobre as ideias geradas.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <i class="fas fa-layer-group fa-3x text-success mb-3"></i>
+                        <h6>Taxonomia de Bloom</h6>
+                        <p class="card-text small">
+                            Classificação automática de objetivos educacionais nos 6 níveis cognitivos.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <i class="fas fa-palette fa-3x text-warning mb-3"></i>
+                        <h6>Endo-GDC</h6>
+                        <p class="card-text small">
+                            Game Design Canvas especializado para jogos educativos endógenos.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Start Button -->
+        <div class="text-center">
+            <a href="{{ url_for('home.start_session') }}" class="btn btn-primary btn-lg">
+                <i class="fas fa-play"></i> 
+                Iniciar Novo Projeto de Jogo
+            </a>
+        </div>
+
+        <!-- About Section -->
+        <div class="card mt-5">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle"></i> 
+                    Sobre o Sistema
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <strong>Dissertação de Mestrado:</strong> "Uma abordagem com multiagentes baseados em LLMs para o Design de Jogos Educativos"
+                </p>
+                <p class="mb-2">
+                    <strong>Autor:</strong> Caio Silva Azeredo
+                </p>
+                <p class="mb-2">
+                    <strong>Orientador:</strong> Prof. Geraldo Bonorino Xexéo
+                </p>
+                <p class="mb-0">
+                    <strong>Instituição:</strong> COPPE/UFRJ - Programa de Engenharia de Sistemas e Computação
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

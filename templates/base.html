@@ -1,0 +1,224 @@
+<!-- templates/base.html - Template Base -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sistema de Design de Jogos Educativos{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <style>
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .module-card {
+            transition: transform 0.3s;
+            cursor: pointer;
+        }
+        .module-card:hover {
+            transform: translateY(-5px);
+        }
+        .progress-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+        .progress-step {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            position: relative;
+        }
+        .progress-step.active {
+            background: #007bff;
+            color: white;
+        }
+        .progress-step.completed {
+            background: #28a745;
+            color: white;
+        }
+        .card-idea {
+            background: #ffd700;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 5px;
+            cursor: move;
+            position: absolute;
+            min-width: 150px;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .ai-generated {
+            border-left: 4px solid #007bff;
+        }
+        .bloom-pyramid {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .bloom-level {
+            margin: 4px auto;
+            padding: 15px;
+            color: white;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 4px;
+        }
+        .bloom-level:hover {
+            transform: translateX(10px);
+        }
+        .gdc-canvas {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ccc;
+            position: relative;
+            background: #f8f9fa;
+            overflow: auto;
+        }
+        .gdc-section {
+            position: absolute;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            font-weight: bold;
+            min-height: 100px;
+        }
+        .gdc-note {
+            position: absolute;
+            background: #ffff99;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 12px;
+            cursor: move;
+            max-width: 150px;
+            word-wrap: break-word;
+        }
+        .loading {
+            display: none;
+        }
+        .loading.show {
+            display: inline-block;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('home.index') }}">
+                <i class="fas fa-gamepad"></i> Design de Jogos Educativos
+            </a>
+            
+            {% if session and session.id %}
+            <div class="navbar-text text-white">
+                <small>Sessão: #{{ session.id }} | 
+                {% if session.status == 'active' %}
+                    <span class="badge bg-success">Ativa</span>
+                {% else %}
+                    <span class="badge bg-secondary">Concluída</span>
+                {% endif %}
+                </small>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- Progress Indicator -->
+    {% if session and session.id %}
+    <div class="container mt-3">
+        <div class="progress-indicator">
+            <div class="progress-step {% if request.endpoint.startswith('brainstorm') %}active{% endif %}">
+                <i class="fas fa-lightbulb"></i><br>
+                <small>Brainstorming</small>
+            </div>
+            <div class="progress-step {% if request.endpoint.startswith('socratic') %}active{% endif %}">
+                <i class="fas fa-question-circle"></i><br>
+                <small>Reflexão Socrática</small>
+            </div>
+            <div class="progress-step {% if request.endpoint.startswith('bloom') %}active{% endif %}">
+                <i class="fas fa-graduation-cap"></i><br>
+                <small>Taxonomia de Bloom</small>
+            </div>
+            <div class="progress-step {% if request.endpoint.startswith('gamedesign') %}active{% endif %}">
+                <i class="fas fa-pencil-ruler"></i><br>
+                <small>Game Design Canvas</small>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="container mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-light mt-5 py-4">
+        <div class="container text-center">
+            <p class="text-muted mb-0">
+                Sistema de Design de Jogos Educativos com Multiagentes baseados em LLMs
+                <br><small>Dissertação de Mestrado - Caio Silva Azeredo</small>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Common JavaScript -->
+    <script>
+        // Função para mostrar loading
+        function showLoading(element) {
+            $(element).addClass('show');
+        }
+        
+        function hideLoading(element) {
+            $(element).removeClass('show');
+        }
+        
+        // Função para mostrar alertas
+        function showAlert(message, type = 'info') {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            $('main .container').prepend(alertHtml);
+        }
+        
+        // Configuração padrão para requisições AJAX
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                    xhr.setRequestHeader("Content-Type", "application/json");
+                }
+            }
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

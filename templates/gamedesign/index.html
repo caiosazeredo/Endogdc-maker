@@ -1,0 +1,862 @@
+<!-- templates/gamedesign/index.html - Módulo Game Design -->
+{% extends "base.html" %}
+
+{% block title %}Game Design Canvas - Sistema de Design de Jogos Educativos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2>
+                    <i class="fas fa-pencil-ruler text-warning"></i> 
+                    Endo-GDC (Game Design Canvas)
+                </h2>
+                <p class="text-muted">Estruture seu jogo educativo endógeno</p>
+            </div>
+            <div>
+                <span class="badge bg-info">Sessão #{{ session.id }}</span>
+                <a href="{{ url_for('gamedesign.export_summary', session_id=session.id) }}" 
+                   class="btn btn-sm btn-success ms-2" target="_blank">
+                    <i class="fas fa-download"></i> Exportar Resumo
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Canvas Principal -->
+            <div class="col-lg-8">
+                <!-- Toolbar -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="currentSection" class="form-label">Seção Selecionada:</label>
+                                    <select class="form-select" id="currentSection">
+                                        <option value="">Selecione uma seção...</option>
+                                        {% for section in sections %}
+                                        <option value="{{ section.name }}">{{ section.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-8 text-end">
+                                <button class="btn btn-success me-2" onclick="getSuggestions()" disabled id="suggestionsBtn">
+                                    <i class="fas fa-robot"></i> 
+                                    Obter Sugestões da IA
+                                    <span class="spinner-border spinner-border-sm loading ms-2" role="status"></span>
+                                </button>
+                                <button class="btn btn-primary me-2" onclick="addNoteToCurrentSection()" disabled id="addNoteBtn">
+                                    <i class="fas fa-plus"></i> Adicionar Nota
+                                </button>
+                                <button class="btn btn-warning" onclick="exportCanvas()">
+                                    <i class="fas fa-download"></i> Exportar ENDO-GDC
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Canvas -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-th-large"></i> 
+                            Canvas do Jogo Educativo
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="gdcCanvas" class="gdc-canvas">
+                            <!-- Seções do Canvas -->
+                            {% for section in sections %}
+                            <div class="gdc-section" 
+                                 id="section-{{ section.name.lower().replace(' ', '-') }}"
+                                 data-section="{{ section.name }}"
+                                 style="left: {{ section.position.x }}px; 
+                                        top: {{ section.position.y }}px; 
+                                        width: {{ section.position.width }}px; 
+                                        height: {{ section.position.height }}px; 
+                                        background-color: {{ section.color }};">
+                                <div class="section-title">{{ section.name }}</div>
+                                <div class="section-description">{{ section.description }}</div>
+                                
+                                <!-- Notas da seção -->
+                                {% if notes_by_section.get(section.name) %}
+                                    {% for note in notes_by_section[section.name] %}
+                                    <div class="gdc-note" 
+                                         data-note-id="{{ note.id }}"
+                                         style="left: {{ note.position_x }}px; 
+                                                top: {{ note.position_y + 60 }}px; 
+                                                background-color: {{ note.color }};">
+                                        {{ note.text }}
+                                        {% if note.is_ai_generated %}
+                                            <br><small class="text-muted"><i class="fas fa-robot"></i> IA</small>
+                                        {% endif %}
+                                        <button class="btn btn-sm btn-outline-danger float-end" 
+                                                onclick="deleteNote({{ note.id }})" 
+                                                style="padding: 1px 4px; font-size: 10px;">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Multiagentes -->
+            <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-users"></i> 
+                            Chat Multiagentes
+                        </h6>
+                        <small class="text-muted">Discussão entre agentes especialistas</small>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <!-- Chat Messages -->
+                        <div id="chatMessages" class="chat-messages flex-grow-1 mb-3" style="height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px;">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-comments fa-3x mb-2"></i>
+                                <p>Inicie uma conversa com os agentes especialistas!</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Chat Input -->
+                        <div class="chat-input">
+                            <div class="input-group mb-2">
+                                <input type="text" 
+                                       id="chatInput" 
+                                       class="form-control" 
+                                       placeholder="Digite sua pergunta para os agentes..."
+                                       onkeypress="handleChatKeyPress(event)">
+                                <button class="btn btn-primary" onclick="sendChatMessage()">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">Pressione Enter para enviar</small>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="clearChat()">
+                                    <i class="fas fa-broom"></i> Limpar Chat
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Details -->
+        <div class="card mt-4" id="sectionDetails" style="display: none;">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle"></i> 
+                    Detalhes da Seção: <span id="sectionName"></span>
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <p id="sectionDescription"></p>
+                        <div id="sectionNotes"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Sugestões da IA:</h6>
+                        <div id="aiSuggestions"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6><i class="fas fa-info-circle"></i> Como usar o Canvas</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="mb-0 small">
+                            <li>Clique em uma seção do canvas para selecioná-la</li>
+                            <li>Use "Obter Sugestões da IA" para ideias específicas</li>
+                            <li>Adicione notas clicando em "Adicionar Nota"</li>
+                            <li>Arraste as notas para organizá-las dentro das seções</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="mb-0 small">
+                            <li><strong>Jogadores:</strong> Defina seu público-alvo</li>
+                            <li><strong>Objetivos:</strong> Use os objetivos da Taxonomia de Bloom</li>
+                            <li><strong>Contexto:</strong> Ambiente e recursos educacionais</li>
+                            <li><strong>Mecânicas:</strong> Regras e sistemas do jogo</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para adicionar nota -->
+<div class="modal fade" id="addNoteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Adicionar Nota</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addNoteForm">
+                    <div class="mb-3">
+                        <label for="noteText" class="form-label">Conteúdo da Nota</label>
+                        <textarea class="form-control" 
+                                  id="noteText" 
+                                  rows="3" 
+                                  placeholder="Digite o conteúdo da nota..."
+                                  required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="noteColor" class="form-label">Cor da Nota</label>
+                        <select class="form-select" id="noteColor">
+                            <option value="#ffff99">Amarelo (padrão)</option>
+                            <option value="#90EE90">Verde claro</option>
+                            <option value="#87CEEB">Azul céu</option>
+                            <option value="#FFB6C1">Rosa claro</option>
+                            <option value="#DDA0DD">Ameixa</option>
+                            <option value="#F0E68C">Cáqui</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="addNote()">Adicionar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedSection = null;
+let currentSectionData = null;
+
+$(document).ready(function() {
+    setupCanvasInteraction();
+    setupSectionSelector();
+});
+
+function setupCanvasInteraction() {
+    $('.gdc-section').on('click', function(e) {
+        if ($(e.target).hasClass('btn') || $(e.target).hasClass('fa-times')) {
+            return; // Não selecionar se clicou em botão de delete
+        }
+        
+        const sectionName = $(this).data('section');
+        selectSection(sectionName);
+    });
+}
+
+function setupSectionSelector() {
+    $('#currentSection').on('change', function() {
+        const sectionName = $(this).val();
+        if (sectionName) {
+            selectSection(sectionName);
+        } else {
+            deselectSection();
+        }
+    });
+}
+
+function selectSection(sectionName) {
+    selectedSection = sectionName;
+    
+    // Atualizar seletor
+    $('#currentSection').val(sectionName);
+    
+    // Destacar seção no canvas
+    $('.gdc-section').removeClass('selected');
+    $(`.gdc-section[data-section="${sectionName}"]`).addClass('selected');
+    
+    // Habilitar botões
+    $('#suggestionsBtn, #addNoteBtn').prop('disabled', false);
+    
+    // Encontrar dados da seção
+    currentSectionData = {{ sections|tojson }}.find(s => s.name === sectionName);
+    
+    // Mostrar detalhes
+    showSectionDetails(sectionName);
+}
+
+function deselectSection() {
+    selectedSection = null;
+    currentSectionData = null;
+    
+    $('.gdc-section').removeClass('selected');
+    $('#suggestionsBtn, #addNoteBtn').prop('disabled', true);
+    $('#sectionDetails').hide();
+}
+
+function showSectionDetails(sectionName) {
+    $('#sectionName').text(sectionName);
+    $('#sectionDescription').text(currentSectionData.description);
+    
+    // Listar notas existentes
+    const notes = $(`.gdc-section[data-section="${sectionName}"] .gdc-note`);
+    let notesHtml = '';
+    
+    if (notes.length > 0) {
+        notesHtml = '<strong>Notas existentes:</strong><ul>';
+        notes.each(function() {
+            const noteText = $(this).text().replace('IA', '').trim();
+            notesHtml += `<li>${noteText}</li>`;
+        });
+        notesHtml += '</ul>';
+    } else {
+        notesHtml = '<p class="text-muted">Nenhuma nota adicionada ainda.</p>';
+    }
+    
+    $('#sectionNotes').html(notesHtml);
+    $('#sectionDetails').show();
+}
+
+function getSuggestions() {
+    if (!selectedSection) {
+        showAlert('Selecione uma seção primeiro!', 'warning');
+        return;
+    }
+    
+    const button = $('#suggestionsBtn');
+    const loading = button.find('.loading');
+    
+    showLoading(loading);
+    button.prop('disabled', true);
+    
+    $.ajax({
+        url: '{{ url_for("gamedesign.get_suggestions") }}',
+        method: 'POST',
+        data: JSON.stringify({ 
+            session_id: {{ session.id }},
+            section_name: selectedSection
+        }),
+        success: function(response) {
+            if (response.success && response.suggestions) {
+                displaySuggestions(response.suggestions);
+                showAlert(`${response.suggestions.length} sugestões geradas!`, 'success');
+            } else {
+                showAlert('Erro ao obter sugestões: ' + (response.error || 'Erro desconhecido'), 'danger');
+            }
+        },
+        error: function() {
+            showAlert('Erro de conexão!', 'danger');
+        },
+        complete: function() {
+            hideLoading(loading);
+            button.prop('disabled', false);
+        }
+    });
+}
+
+function displaySuggestions(suggestions) {
+    let suggestionsHtml = '';
+    suggestions.forEach((suggestion, index) => {
+        suggestionsHtml += `
+            <div class="suggestion-item mb-2 p-2 border rounded">
+                <small>${suggestion}</small>
+                <button class="btn btn-sm btn-outline-primary float-end" 
+                        onclick="addSuggestionAsNote('${suggestion.replace(/'/g, "\\'")}')">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+        `;
+    });
+    
+    $('#aiSuggestions').html(suggestionsHtml);
+}
+
+function addSuggestionAsNote(suggestion) {
+    const data = {
+        session_id: {{ session.id }},
+        section_name: selectedSection,
+        text: suggestion,
+        color: '#90EE90', // Verde para sugestões da IA
+        position_x: Math.random() * 100 + 10,
+        position_y: Math.random() * 50 + 10,
+        is_ai_generated: true
+    };
+    
+    $.ajax({
+        url: '{{ url_for("gamedesign.add_note") }}',
+        method: 'POST',
+        data: JSON.stringify(data),
+        success: function(response) {
+            if (response.success) {
+                addNoteToCanvas(response.note, selectedSection);
+                showAlert('Sugestão adicionada como nota!', 'success');
+                showSectionDetails(selectedSection); // Atualizar detalhes
+            } else {
+                showAlert('Erro ao adicionar nota: ' + response.error, 'danger');
+            }
+        },
+        error: function() {
+            showAlert('Erro de conexão!', 'danger');
+        }
+    });
+}
+
+function addNoteToCurrentSection() {
+    if (!selectedSection) {
+        showAlert('Selecione uma seção primeiro!', 'warning');
+        return;
+    }
+    
+    $('#addNoteModal').modal('show');
+    $('#noteText').focus();
+}
+
+function addNote() {
+    const text = $('#noteText').val().trim();
+    const color = $('#noteColor').val();
+    
+    if (!text) {
+        showAlert('Digite o conteúdo da nota!', 'warning');
+        return;
+    }
+    
+    const data = {
+        session_id: {{ session.id }},
+        section_name: selectedSection,
+        text: text,
+        color: color,
+        position_x: Math.random() * 100 + 10,
+        position_y: Math.random() * 50 + 10,
+        is_ai_generated: false
+    };
+    
+    $.ajax({
+        url: '{{ url_for("gamedesign.add_note") }}',
+        method: 'POST',
+        data: JSON.stringify(data),
+        success: function(response) {
+            if (response.success) {
+                addNoteToCanvas(response.note, selectedSection);
+                $('#addNoteModal').modal('hide');
+                $('#addNoteForm')[0].reset();
+                showAlert('Nota adicionada com sucesso!', 'success');
+                showSectionDetails(selectedSection); // Atualizar detalhes
+            } else {
+                showAlert('Erro ao adicionar nota: ' + response.error, 'danger');
+            }
+        },
+        error: function() {
+            showAlert('Erro de conexão!', 'danger');
+        }
+    });
+}
+
+function addNoteToCanvas(note, sectionName) {
+    const sectionElement = $(`.gdc-section[data-section="${sectionName}"]`);
+    
+    const noteHtml = `
+        <div class="gdc-note" 
+             data-note-id="${note.id}"
+             style="left: ${note.position_x}px; 
+                    top: ${note.position_y + 60}px; 
+                    background-color: ${note.color};">
+            ${note.text}
+            ${note.is_ai_generated ? '<br><small class="text-muted"><i class="fas fa-robot"></i> IA</small>' : ''}
+            <button class="btn btn-sm btn-outline-danger float-end" 
+                    onclick="deleteNote(${note.id})" 
+                    style="padding: 1px 4px; font-size: 10px;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    sectionElement.append(noteHtml);
+}
+
+function deleteNote(noteId) {
+    if (!confirm('Tem certeza que deseja remover esta nota?')) {
+        return;
+    }
+    
+    $.ajax({
+        url: '{{ url_for("gamedesign.delete_note") }}',
+        method: 'POST',
+        data: JSON.stringify({ note_id: noteId }),
+        success: function(response) {
+            if (response.success) {
+                $(`.gdc-note[data-note-id="${noteId}"]`).fadeOut(300, function() {
+                    $(this).remove();
+                    if (selectedSection) {
+                        showSectionDetails(selectedSection); // Atualizar detalhes
+                    }
+                });
+                showAlert('Nota removida!', 'info');
+            } else {
+                showAlert('Erro ao remover nota: ' + response.error, 'danger');
+            }
+        },
+        error: function() {
+            showAlert('Erro de conexão!', 'danger');
+        }
+    });
+}
+
+// === FUNCIONALIDADES DO CHAT MULTIAGENTES ===
+
+function handleChatKeyPress(event) {
+    if (event.key === 'Enter') {
+        sendChatMessage();
+    }
+}
+
+function sendChatMessage() {
+    const message = $('#chatInput').val().trim();
+    if (!message) {
+        showAlert('Digite uma mensagem primeiro!', 'warning');
+        return;
+    }
+    
+    // Adicionar mensagem do usuário ao chat
+    addChatMessage('user', message, 'Você');
+    $('#chatInput').val('');
+    
+    // Mostrar loading
+    addChatMessage('system', 'Os agentes estão discutindo...', 'Sistema', true);
+    
+    // Enviar para multiagentes
+    $.ajax({
+        url: '{{ url_for("gamedesign.multiagent_chat") }}',
+        method: 'POST',
+        data: JSON.stringify({
+            session_id: {{ session.id }},
+            message: message,
+            focus_section: selectedSection
+        }),
+        success: function(response) {
+            // Remover mensagem de loading
+            $('.chat-message.loading').remove();
+            
+            if (response.success) {
+                displayMultiagentResponse(response);
+            } else {
+                addChatMessage('error', 'Erro: ' + response.error, 'Sistema');
+            }
+        },
+        error: function() {
+            $('.chat-message.loading').remove();
+            addChatMessage('error', 'Erro de conexão com os agentes!', 'Sistema');
+        }
+    });
+}
+
+function addChatMessage(type, content, sender, isLoading = false) {
+    const chatMessages = $('#chatMessages');
+    const messageClass = type === 'user' ? 'bg-primary text-white' : 
+                        type === 'error' ? 'bg-danger text-white' :
+                        type === 'system' ? 'bg-secondary text-white' :
+                        'bg-light';
+    
+    const loadingClass = isLoading ? 'loading' : '';
+    
+    const messageHtml = `
+        <div class="chat-message mb-2 ${loadingClass}">
+            <div class="card">
+                <div class="card-header ${messageClass} py-1">
+                    <small><strong>${sender}</strong></small>
+                </div>
+                <div class="card-body py-2">
+                    <small>${content}</small>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    chatMessages.append(messageHtml);
+    chatMessages.scrollTop(chatMessages[0].scrollHeight);
+}
+
+function displayMultiagentResponse(response) {
+    // Mostrar resposta de cada agente
+    response.agents_responses.forEach(agentResponse => {
+        const agent = agentResponse.agent;
+        const content = agentResponse.response;
+        
+        addChatMessage('agent', content, `${agent.emoji} ${agent.name}`);
+    });
+    
+    // Mostrar síntese do coordenador
+    if (response.synthesis) {
+        addChatMessage('synthesis', response.synthesis, '🎯 Síntese do Coordenador');
+    }
+    
+    // Mostrar sugestões acionáveis
+    if (response.suggestions && response.suggestions.suggestions && response.suggestions.suggestions.length > 0) {
+        displayActionableSuggestions(response.suggestions.suggestions);
+    }
+}
+
+function displayActionableSuggestions(suggestions) {
+    let suggestionsHtml = '<div class="mt-2"><strong>Sugestões Acionáveis:</strong></div>';
+    
+    suggestions.forEach((suggestion, index) => {
+        suggestionsHtml += `
+            <div class="suggestion-card border rounded p-2 mt-2">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <strong>${suggestion.section}</strong>
+                        <br><small>${suggestion.content}</small>
+                        <br><em class="text-muted" style="font-size: 0.8em;">${suggestion.justification}</em>
+                    </div>
+                    <div class="btn-group-vertical ms-2">
+                        <button class="btn btn-sm btn-success" onclick="applySuggestion(${index}, true)">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="applySuggestion(${index}, false)">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    addChatMessage('suggestions', suggestionsHtml, '💡 Sugestões dos Agentes');
+    
+    // Armazenar sugestões para uso posterior
+    window.currentSuggestions = suggestions;
+}
+
+function applySuggestion(suggestionIndex, accept) {
+    const suggestion = window.currentSuggestions[suggestionIndex];
+    
+    if (accept) {
+        // Aplicar sugestão
+        $.ajax({
+            url: '{{ url_for("gamedesign.apply_suggestion") }}',
+            method: 'POST',
+            data: JSON.stringify({
+                session_id: {{ session.id }},
+                suggestion: suggestion
+            }),
+            success: function(response) {
+                if (response.success && response.note) {
+                    addNoteToCanvas(response.note, response.note.section_name);
+                    showAlert('Sugestão aplicada com sucesso!', 'success');
+                } else if (response.success) {
+                    showAlert('Sugestão aplicada!', 'success');
+                } else {
+                    showAlert('Erro ao aplicar sugestão: ' + response.error, 'danger');
+                }
+            },
+            error: function() {
+                showAlert('Erro de conexão!', 'danger');
+            }
+        });
+    }
+    
+    // Remover botões da sugestão
+    $(`.suggestion-card:eq(${suggestionIndex}) .btn-group-vertical`).remove();
+    $(`.suggestion-card:eq(${suggestionIndex})`).addClass(accept ? 'border-success' : 'border-danger');
+    $(`.suggestion-card:eq(${suggestionIndex})`).append(
+        `<small class="text-muted d-block mt-1">${accept ? '✅ Aceita' : '❌ Recusada'}</small>`
+    );
+}
+
+function clearChat() {
+    if (confirm('Tem certeza que deseja limpar o chat?')) {
+        $('#chatMessages').html(`
+            <div class="text-center text-muted">
+                <i class="fas fa-comments fa-3x mb-2"></i>
+                <p>Inicie uma conversa com os agentes especialistas!</p>
+            </div>
+        `);
+    }
+}
+
+// === EXPORTAÇÃO DO CANVAS ===
+
+function exportCanvas() {
+    $.ajax({
+        url: '{{ url_for("gamedesign.export_canvas") }}',
+        method: 'POST',
+        data: JSON.stringify({ session_id: {{ session.id }} }),
+        success: function(response) {
+            if (response.success) {
+                // Abrir nova janela com o HTML gerado
+                const newWindow = window.open('', '_blank');
+                newWindow.document.write(response.html);
+                newWindow.document.close();
+                
+                // Oferecer opções de download
+                showExportOptions(response.html, response.game_name);
+            } else {
+                showAlert('Erro ao exportar: ' + response.error, 'danger');
+            }
+        },
+        error: function() {
+            showAlert('Erro de conexão!', 'danger');
+        }
+    });
+}
+
+function showExportOptions(html, gameName) {
+    const exportModal = `
+        <div class="modal fade" id="exportModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Exportar ENDO-GDC: ${gameName}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Seu ENDO-GDC foi gerado com sucesso! Escolha uma opção de exportação:</p>
+                        
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary" onclick="downloadHTML('${gameName}')">
+                                <i class="fas fa-code"></i> Baixar como HTML
+                            </button>
+                            <button class="btn btn-success" onclick="printToPDF()">
+                                <i class="fas fa-file-pdf"></i> Imprimir como PDF
+                            </button>
+                            <button class="btn btn-info" onclick="copyToClipboard()">
+                                <i class="fas fa-copy"></i> Copiar HTML
+                            </button>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <strong>Dica:</strong> Para converter para imagem (JPG), 
+                                imprima como PDF e use uma ferramenta online para conversão.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    $('body').append(exportModal);
+    $('#exportModal').modal('show');
+    
+    // Armazenar HTML para uso posterior
+    window.exportedHTML = html;
+    
+    // Remover modal quando fechado
+    $('#exportModal').on('hidden.bs.modal', function() {
+        $(this).remove();
+    });
+}
+
+function downloadHTML(gameName) {
+    const blob = new Blob([window.exportedHTML], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `endo-gdc-${gameName.toLowerCase().replace(/\s+/g, '-')}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    $('#exportModal').modal('hide');
+    showAlert('HTML baixado com sucesso!', 'success');
+}
+
+function printToPDF() {
+    const newWindow = window.open('', '_blank');
+    newWindow.document.write(window.exportedHTML);
+    newWindow.document.close();
+    newWindow.focus();
+    setTimeout(() => {
+        newWindow.print();
+    }, 500);
+    
+    $('#exportModal').modal('hide');
+    showAlert('Janela de impressão aberta! Use "Salvar como PDF" na impressora.', 'info');
+}
+
+function copyToClipboard() {
+    navigator.clipboard.writeText(window.exportedHTML).then(function() {
+        showAlert('HTML copiado para a área de transferência!', 'success');
+    }).catch(function() {
+        // Fallback para navegadores mais antigos
+        const textArea = document.createElement('textarea');
+        textArea.value = window.exportedHTML;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showAlert('HTML copiado para a área de transferência!', 'success');
+    });
+    
+    $('#exportModal').modal('hide');
+}
+</script>
+
+<style>
+.gdc-section.selected {
+    border-color: #007bff !important;
+    border-width: 3px !important;
+    box-shadow: 0 0 10px rgba(0,123,255,0.5);
+}
+
+.section-title {
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.section-description {
+    font-size: 11px;
+    color: #666;
+    line-height: 1.2;
+}
+
+.suggestion-item:hover {
+    background-color: #f8f9fa;
+}
+
+.gdc-note {
+    cursor: move;
+    z-index: 10;
+}
+
+.gdc-note:hover {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Chat Styles */
+.chat-messages {
+    background-color: #f8f9fa;
+}
+
+.chat-message.loading {
+    opacity: 0.7;
+}
+
+.suggestion-card {
+    background-color: #f8f9fa;
+}
+
+.suggestion-card:hover {
+    background-color: #e9ecef;
+}
+
+.agent-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 5px;
+}
+</style>
+{% endblock %}

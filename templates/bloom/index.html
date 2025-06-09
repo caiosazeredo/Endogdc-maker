@@ -1,0 +1,367 @@
+<!-- templates/bloom/index.html - Módulo Taxonomia de Bloom -->
+{% extends "base.html" %}
+
+{% block title %}Taxonomia de Bloom - Sistema de Design de Jogos Educativos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2>
+                    <i class="fas fa-graduation-cap text-success"></i> 
+                    Taxonomia de Bloom
+                </h2>
+                <p class="text-muted">Defina objetivos educacionais baseados nos níveis cognitivos</p>
+            </div>
+            <div>
+                <span class="badge bg-info">Sessão #{{ session.id }}</span>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Bloom Pyramid -->
+            <div class="col-md-5">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-layer-group"></i> 
+                            Pirâmide de Bloom
+                        </h6>
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="bloom-pyramid">
+                            {% for level in bloom_levels %}
+                            <div class="bloom-level level-{{ level.name.lower() }}" 
+                                 style="background-color: {{ level.color }}; width: {{ 40 + (7-level.order) * 10 }}%;"
+                                 data-level="{{ level.name }}"
+                                 onclick="selectLevel('{{ level.name }}')"
+                                 title="{{ level.description }}">
+                                <strong>{{ level.order }}. {{ level.name }}</strong>
+                                <div class="level-description">
+                                    <strong>{{ level.name }}</strong>
+                                    <p>{{ level.description }}</p>
+                                    <strong>Verbos:</strong> 
+                                    {{ level.verbs|join(', ') }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-success" onclick="generateObjectives()">
+                                <i class="fas fa-robot"></i> 
+                                Gerar Objetivos Automaticamente
+                                <span class="spinner-border spinner-border-sm loading ms-2" role="status"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Instructions -->
+                <div class="card mt-3">
+                    <div class="card-body">
+                        <h6><i class="fas fa-info-circle"></i> Como usar</h6>
+                        <ul class="mb-0 small">
+                            <li>Clique nos níveis da pirâmide para criar objetivos manualmente</li>
+                            <li>Use "Gerar Objetivos Automaticamente" para criar com IA</li>
+                            <li>Objetivos devem começar com verbos no infinitivo</li>
+                            <li>Cada nível representa complexidade cognitiva crescente</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Objectives Panel -->
+            <div class="col-md-7">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-target"></i> 
+                            Objetivos Educacionais
+                        </h6>
+                        <button class="btn btn-sm btn-primary" onclick="showAddObjectiveModal()">
+                            <i class="fas fa-plus"></i> Adicionar Manual
+                        </button>
+                    </div>
+                    <div class="card-body" id="objectivesContainer" style="max-height: 500px; overflow-y: auto;">
+                        {% for level in bloom_levels %}
+                        <div class="mb-3">
+                            <h6 style="color: {{ level.color }};">
+                                <i class="fas fa-circle"></i> {{ level.name }}
+                            </h6>
+                            <div id="objectives-{{ level.name.lower() }}" class="mb-2">
+                                {% if objectives_by_level.get(level.name) %}
+                                    {% for objective in objectives_by_level[level.name] %}
+                                    <div class="objective-card mb-2" 
+                                         style="background-color: {{ objective.color }}; border-left: 4px solid {{ level.color }};"
+                                         data-objective-id="{{ objective.id }}">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="flex-grow-1">{{ objective.text }}</span>
+                                            <div>
+                                                {% if objective.is_ai_generated %}
+                                                    <span class="badge bg-primary me-2">IA</span>
+                                                {% endif %}
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteObjective({{ objective.id }})">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted small">Nenhum objetivo definido para este nível</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="card-footer text-end">
+                        <button class="btn btn-primary" onclick="finishModule()">
+                            <i class="fas fa-arrow-right"></i> Continuar para Game Design
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para adicionar objetivo manual -->
+<div class="modal fade" id="addObjectiveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Adicionar Objetivo Educacional</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addObjectiveForm">
+                    <div class="mb-3">
+                        <label for="objectiveLevel" class="form-label">Nível da Taxonomia</label>
+                        <select class="form-select" id="objectiveLevel" required>
+                            <option value="">Selecione um nível...</option>
+                            {% for level in bloom_levels %}
+                            <option value="{{ level.name }}">{{ level.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="objectiveText" class="form-label">Texto do Objetivo</label>
+                        <textarea class="form-control" 
+                                  id="objectiveText" 
+                                  rows="3" 
+                                  placeholder="Digite o objetivo educacional (comece com um verbo no infinitivo)..."
+                                  required></textarea>
+                        <div class="form-text">
+                            Exemplo: "Analisar os diferentes tipos de energia renovável"
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="addObjective()">Adicionar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedLevel = null;
+
+$(document).ready(function() {
+    // Inicializar níveis de Bloom no banco
+    initializeBloomLevels();
+});
+
+function initializeBloomLevels() {
+    $.ajax({
+        url: '{{ url_for("bloom.initialize_levels") }}',
+        method: 'POST',
+        data: JSON.stringify({}),
+        success: function(response) {
+            if (!response.success) {
+                console.error('Erro ao inicializar níveis:', response.error);
+            }
+        }
+    });
+}
+
+function selectLevel(levelName) {
+    selectedLevel = levelName;
+    
+    // Remover seleção anterior
+    $('.bloom-level').removeClass('selected');
+    
+    // Adicionar seleção atual
+    $(`.bloom-level[data-level="${levelName}"]`).addClass('selected');
+    
+    // Mostrar modal para adicionar objetivo
+    $('#objectiveLevel').val(levelName);
+    showAddObjectiveModal();
+}
+
+function showAddObjectiveModal() {
+    $('#addObjectiveModal').modal('show');
+    $('#objectiveText').focus();
+}
+
+function addObjective() {
+    const level = $('#objectiveLevel').val();
+    const text = $('#objectiveText').val().trim();
+    
+    if (!level || !text) {
+        showAlert('Preencha todos os campos!', 'warning');
+        return;
+    }
+    
+    const data = {
+        session_id: {{ session.id }},
+        level: level,
+        text: text
+    };
+    
+    $.ajax({
+        url: '{{ url_for("bloom.add_objective") }}',
+        method: 'POST',
+        data: JSON.stringify(data),
+        success: function(response) {
+            if (response.success) {
+                addObjectiveToUI(response.objective);
+                $('#addObjectiveModal').modal('hide');
+                $('#addObjectiveForm')[0].reset();
+                showAlert('Objetivo adicionado com sucesso!', 'success');
+            } else {
+                showAlert('Erro ao adicionar objetivo: ' + response.error, 'danger');
+            }
+        },
+        error: function() {
+            showAlert('Erro de conexão!', 'danger');
+        }
+    });
+}
+
+function generateObjectives() {
+    const button = $('button:contains("Gerar Objetivos Automaticamente")');
+    const loading = button.find('.loading');
+    
+    showLoading(loading);
+    button.prop('disabled', true);
+    
+    $.ajax({
+        url: '{{ url_for("bloom.generate_objectives") }}',
+        method: 'POST',
+        data: JSON.stringify({ session_id: {{ session.id }} }),
+        success: function(response) {
+            if (response.success && response.objectives) {
+                // Limpar objetivos existentes gerados por IA
+                $('.objective-card').each(function() {
+                    if ($(this).find('.badge:contains("IA")').length > 0) {
+                        $(this).remove();
+                    }
+                });
+                
+                // Adicionar novos objetivos
+                response.objectives.forEach(objective => {
+                    addObjectiveToUI(objective);
+                });
+                
+                showAlert(`${response.objectives.length} objetivos gerados com sucesso!`, 'success');
+            } else {
+                showAlert('Erro ao gerar objetivos: ' + (response.error || 'Erro desconhecido'), 'danger');
+            }
+        },
+        error: function(xhr) {
+            let errorMsg = 'Erro de conexão!';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMsg = xhr.responseJSON.error;
+            }
+            showAlert(errorMsg, 'danger');
+        },
+        complete: function() {
+            hideLoading(loading);
+            button.prop('disabled', false);
+        }
+    });
+}
+
+function addObjectiveToUI(objective) {
+    const levelContainer = $(`#objectives-${objective.level.toLowerCase()}`);
+    
+    // Remover mensagem de "nenhum objetivo"
+    levelContainer.find('.text-muted').remove();
+    
+    const objectiveHtml = `
+        <div class="objective-card mb-2" 
+             style="background-color: ${objective.color}; border-left: 4px solid ${objective.color};"
+             data-objective-id="${objective.id}">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="flex-grow-1">${objective.text}</span>
+                <div>
+                    ${objective.is_ai_generated ? '<span class="badge bg-primary me-2">IA</span>' : ''}
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteObjective(${objective.id})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    levelContainer.append(objectiveHtml);
+}
+
+function deleteObjective(objectiveId) {
+    if (!confirm('Tem certeza que deseja remover este objetivo?')) {
+        return;
+    }
+    
+    $.ajax({
+        url: '{{ url_for("bloom.delete_objective") }}',
+        method: 'POST',
+        data: JSON.stringify({ objective_id: objectiveId }),
+        success: function(response) {
+            if (response.success) {
+                $(`.objective-card[data-objective-id="${objectiveId}"]`).fadeOut(300, function() {
+                    $(this).remove();
+                });
+                showAlert('Objetivo removido!', 'info');
+            } else {
+                showAlert('Erro ao remover objetivo: ' + response.error, 'danger');
+            }
+        },
+        error: function() {
+            showAlert('Erro de conexão!', 'danger');
+        }
+    });
+}
+
+function finishModule() {
+    const objectiveCount = $('.objective-card').length;
+    
+    if (objectiveCount === 0) {
+        if (!confirm('Você não definiu nenhum objetivo educacional. Deseja continuar mesmo assim?')) {
+            return;
+        }
+    }
+    
+    $.ajax({
+        url: '{{ url_for("bloom.finish") }}',
+        method: 'POST',
+        data: JSON.stringify({ session_id: {{ session.id }} }),
+        success: function(response) {
+            if (response.success) {
+                window.location.href = response.redirect_url;
+            } else {
+                showAlert('Erro ao finalizar módulo: ' + response.error, 'danger');
+            }
+        },
+        error: function() {
+            showAlert('Erro de conexão!', 'danger');
+        }
+    });
+}
+</script>
+{% endblock %}

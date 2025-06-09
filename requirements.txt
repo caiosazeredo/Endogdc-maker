@@ -1,0 +1,28 @@
+# requirements.txt - Dependências Python
+
+# Flask e extensões
+Flask==2.3.3
+Flask-SQLAlchemy==3.0.5
+Flask-Migrate==4.0.5
+
+# Banco de dados MySQL
+PyMySQL==1.1.0
+cryptography==41.0.4
+
+# Requests para chamadas HTTP (Groq API e Gemini API)
+requests==2.31.0
+
+# Utilitários
+python-dotenv==1.0.0
+Werkzeug==2.3.7
+Jinja2==3.1.2
+
+# Para processamento JSON
+jsonschema==4.19.1
+
+# Para logs e debugging
+python-dateutil==2.8.2
+
+# Para manipulação de HTML e exportação
+beautifulsoup4==4.12.2
+html5lib==1.1

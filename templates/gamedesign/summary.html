@@ -1,0 +1,257 @@
+<!-- templates/gamedesign/summary.html - Resumo do Projeto -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resumo do Projeto - Jogo Educativo #{{ session.id }}</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+        
+        .section-box {
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+        }
+        
+        .objective-item {
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid;
+        }
+        
+        .idea-card {
+            background: #ffd700;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 8px;
+            margin: 5px;
+            display: inline-block;
+            font-size: 12px;
+        }
+        
+        .ai-generated {
+            border-left: 3px solid #007bff;
+        }
+        
+        .bloom-level-criar { border-left-color: #8B4513; background-color: rgba(139, 69, 19, 0.1); }
+        .bloom-level-avaliar { border-left-color: #FF4500; background-color: rgba(255, 69, 0, 0.1); }
+        .bloom-level-analisar { border-left-color: #FFD700; background-color: rgba(255, 215, 0, 0.1); }
+        .bloom-level-aplicar { border-left-color: #32CD32; background-color: rgba(50, 205, 50, 0.1); }
+        .bloom-level-compreender { border-left-color: #4169E1; background-color: rgba(65, 105, 225, 0.1); }
+        .bloom-level-lembrar { border-left-color: #8A2BE2; background-color: rgba(138, 43, 226, 0.1); }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <!-- Header -->
+        <div class="row no-print mb-4">
+            <div class="col-12 text-center">
+                <button onclick="window.print()" class="btn btn-primary me-2">
+                    <i class="fas fa-print"></i> Imprimir
+                </button>
+                <button onclick="window.close()" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Fechar
+                </button>
+            </div>
+        </div>
+
+        <!-- Title -->
+        <div class="text-center mb-5">
+            <h1 class="display-5">
+                <i class="fas fa-gamepad text-primary"></i>
+                Projeto de Jogo Educativo
+            </h1>
+            <p class="lead">Sessão #{{ session.id }} - {{ session.start_time.strftime('%d/%m/%Y %H:%M') }}</p>
+            <hr>
+        </div>
+
+        <!-- 1. Brainstorming -->
+        <div class="section-box">
+            <h3>
+                <i class="fas fa-lightbulb text-warning"></i>
+                1. Brainstorming de Ideias
+            </h3>
+            <p class="text-muted">Ideias geradas durante a sessão de brainstorming</p>
+            
+            {% if cards %}
+                <div class="row">
+                    {% for card in cards %}
+                    <div class="col-md-4 mb-2">
+                        <div class="idea-card {% if card.is_ai_generated %}ai-generated{% endif %}">
+                            {{ card.text }}
+                            {% if card.is_ai_generated %}
+                                <br><small class="text-muted"><i class="fas fa-robot"></i> Gerado por IA</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <p><strong>Total de ideias:</strong> {{ cards|length }}</p>
+            {% else %}
+                <p class="text-muted">Nenhuma ideia foi registrada.</p>
+            {% endif %}
+        </div>
+
+        <!-- 2. Reflexão Socrática -->
+        <div class="section-box page-break">
+            <h3>
+                <i class="fas fa-question-circle text-info"></i>
+                2. Reflexão Socrática
+            </h3>
+            <p class="text-muted">Análise crítica das ideias através do método socrático</p>
+            
+            {% if socratic %}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6><strong>Problema Educacional</strong></h6>
+                        <p>{{ socratic.problem }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6><strong>Justificação</strong></h6>
+                        <p>{{ socratic.justification if socratic.justification else 'Não especificado' }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6><strong>Impacto Educacional</strong></h6>
+                        <p>{{ socratic.impact if socratic.impact else 'Não especificado' }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6><strong>Motivação dos Estudantes</strong></h6>
+                        <p>{{ socratic.motivation if socratic.motivation else 'Não especificado' }}</p>
+                    </div>
+                </div>
+            {% else %}
+                <p class="text-muted">Reflexão socrática não foi realizada.</p>
+            {% endif %}
+        </div>
+
+        <!-- 3. Taxonomia de Bloom -->
+        <div class="section-box">
+            <h3>
+                <i class="fas fa-graduation-cap text-success"></i>
+                3. Objetivos Educacionais (Taxonomia de Bloom)
+            </h3>
+            <p class="text-muted">Objetivos educacionais classificados segundo a Taxonomia de Bloom Revisada</p>
+            
+            {% if objectives %}
+                {% set bloom_levels = ['Criar', 'Avaliar', 'Analisar', 'Aplicar', 'Compreender', 'Lembrar'] %}
+                {% for level in bloom_levels %}
+                    {% set level_objectives = objectives | selectattr('level', 'equalto', level) | list %}
+                    {% if level_objectives %}
+                        <h6><strong>{{ level }}</strong></h6>
+                        {% for objective in level_objectives %}
+                            <div class="objective-item bloom-level-{{ level.lower() }}">
+                                {{ objective.text }}
+                                {% if objective.is_ai_generated %}
+                                    <small class="text-muted"><i class="fas fa-robot"></i> IA</small>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endfor %}
+                <p class="mt-3"><strong>Total de objetivos:</strong> {{ objectives|length }}</p>
+            {% else %}
+                <p class="text-muted">Nenhum objetivo educacional foi definido.</p>
+            {% endif %}
+        </div>
+
+        <!-- 4. Game Design Canvas -->
+        <div class="section-box page-break">
+            <h3>
+                <i class="fas fa-pencil-ruler text-warning"></i>
+                4. Game Design Canvas (Endo-GDC)
+            </h3>
+            <p class="text-muted">Estruturação do jogo educativo endógeno</p>
+            
+            {% if notes_by_section %}
+                {% for section in sections %}
+                    {% if notes_by_section.get(section.name) %}
+                        <div class="mb-4">
+                            <h6 style="color: {{ section.color }}; background-color: {{ section.color }}20; padding: 8px; border-radius: 4px;">
+                                <i class="fas fa-square"></i> {{ section.name }}
+                            </h6>
+                            <p class="small text-muted">{{ section.description }}</p>
+                            
+                            <div class="row">
+                                {% for note in notes_by_section[section.name] %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="border rounded p-2 {% if note.is_ai_generated %}ai-generated{% endif %}" 
+                                         style="background-color: {{ note.color }};">
+                                        {{ note.text }}
+                                        {% if note.is_ai_generated %}
+                                            <br><small class="text-muted"><i class="fas fa-robot"></i> Gerado por IA</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                <p class="text-muted">Nenhuma nota foi adicionada ao canvas.</p>
+            {% endif %}
+        </div>
+
+        <!-- Resumo Estatístico -->
+        <div class="section-box">
+            <h3>
+                <i class="fas fa-chart-bar text-secondary"></i>
+                Resumo Estatístico
+            </h3>
+            
+            <div class="row">
+                <div class="col-md-3 text-center">
+                    <h4 class="text-primary">{{ cards|length }}</h4>
+                    <p>Ideias geradas</p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h4 class="text-success">{{ objectives|length }}</h4>
+                    <p>Objetivos educacionais</p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h4 class="text-warning">{{ notes_by_section.values()|sum(start=[])|length }}</h4>
+                    <p>Notas no canvas</p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h4 class="text-info">{{ ((cards|selectattr('is_ai_generated')|list|length) + (objectives|selectattr('is_ai_generated')|list|length) + (notes_by_section.values()|sum(start=[])|selectattr('is_ai_generated')|list|length)) }}</h4>
+                    <p>Contribuições da IA</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-5 pt-4 border-top">
+            <p class="text-muted">
+                <strong>Sistema de Design de Jogos Educativos com Multiagentes baseados em LLMs</strong><br>
+                Dissertação de Mestrado - Caio Silva Azeredo<br>
+                COPPE/UFRJ - Programa de Engenharia de Sistemas e Computação<br>
+                <small>Relatório gerado em {{ moment().format('DD/MM/YYYY HH:mm') if moment else 'data atual' }}</small>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Auto-foco na impressão para facilitar o uso
+        window.onload = function() {
+            if (window.location.search.includes('print=true')) {
+                window.print();
+            }
+        };
+    </script>
+</body>
+</html>

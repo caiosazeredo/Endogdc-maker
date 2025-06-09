@@ -1,0 +1,329 @@
+<!-- templates/brainstorm/index.html - Módulo Brainstorming -->
+{% extends "base.html" %}
+
+{% block title %}Brainstorming - Sistema de Design de Jogos Educativos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2>
+                    <i class="fas fa-lightbulb text-warning"></i> 
+                    Brainstorming de Ideias
+                </h2>
+                <p class="text-muted">Gere e organize ideias para seu jogo educativo</p>
+            </div>
+            <div>
+                <span class="badge bg-info">Sessão #{{ session.id }}</span>
+            </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <input type="text" 
+                                   id="newIdeaText" 
+                                   class="form-control" 
+                                   placeholder="Digite sua ideia aqui..."
+                                   maxlength="200">
+                            <button class="btn btn-primary" onclick="addIdea()">
+                                <i class="fas fa-plus"></i> Adicionar Ideia
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <button class="btn btn-success me-2" onclick="getSuggestions()">
+                            <i class="fas fa-robot"></i> 
+                            Obter Sugestões da IA
+                            <span class="spinner-border spinner-border-sm loading ms-2" role="status"></span>
+                        </button>
+                        <button class="btn btn-warning" onclick="finishBrainstorming()">
+                            <i class="fas fa-arrow-right"></i> Finalizar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ideas Canvas -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-sticky-note"></i> 
+                    Ideias ({{ cards|length }})
+                </h5>
+                <div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearCanvas()">
+                        <i class="fas fa-trash"></i> Limpar Tudo
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="ideasCanvas" class="position-relative" style="height: 500px; background: #f8f9fa; overflow: hidden;">
+                    <!-- Cards serão adicionados aqui dinamicamente -->
+                    {% for card in cards %}
+                    <div class="card-idea {% if card.is_ai_generated %}ai-generated{% endif %}" 
+                         data-card-id="{{ card.id }}"
+                         style="left: {{ card.position_x }}px; top: {{ card.position_y }}px; background-color: {{ card.color }};">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <span class="flex-grow-1">{{ card.text }}</span>
+                            <button class="btn btn-sm btn-outline-danger ms-2" onclick="deleteCard({{ card.id }})">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        {% if card.is_ai_generated %}
+                        <small class="text-muted">
+                            <i class="fas fa-robot"></i> IA
+                        </small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6><i class="fas fa-info-circle"></i> Instruções</h6>
+                <ul class="mb-0">
+                    <li>Digite suas ideias no campo acima e clique em "Adicionar Ideia"</li>
+                    <li>Arrastar e soltar os cards para organizá-los no canvas</li>
+                    <li>Use "Obter Sugestões da IA" para gerar ideias automaticamente</li>
+                    <li>Cards gerados pela IA são destacados com borda azul</li>
+                    <li>Quando terminar, clique em "Finalizar" para prosseguir</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let isDragging = false;
+let currentCard = null;
+let offset = { x: 0, y: 0 };
+
+$(document).ready(function() {
+    setupDragAndDrop();
+    
+    // Enter key para adicionar ideia
+    $('#newIdeaText').keypress(function(e) {
+        if (e.which === 13) {
+            addIdea();
+        }
+    });
+});
+
+function setupDragAndDrop() {
+    $(document).on('mousedown', '.card-idea', function(e) {
+        if ($(e.target).is('button, i')) return; // Não arrastar se clicou no botão
+        
+        isDragging = true;
+        currentCard = $(this);
+        
+        const rect = this.getBoundingClientRect();
+        const canvasRect = document.getElementById('ideasCanvas').getBoundingClientRect();
+        
+        offset.x = e.clientX - rect.left;
+        offset.y = e.clientY - rect.top;
+        
+        currentCard.css('z-index', 1000);
+        e.preventDefault();
+    });
+    
+    $(document).on('mousemove', function(e) {
+        if (!isDragging || !currentCard) return;
+        
+        const canvas = document.getElementById('ideasCanvas');
+        const canvasRect = canvas.getBoundingClientRect();
+        
+        let x = e.clientX - canvasRect.left - offset.x;
+        let y = e.clientY - canvasRect.top - offset.y;
+        
+        // Manter dentro dos limites
+        x = Math.max(0, Math.min(x, canvas.offsetWidth - currentCard.outerWidth()));
+        y = Math.max(0, Math.min(y, canvas.offsetHeight - currentCard.outerHeight()));
+        
+        currentCard.css({
+            left: x + 'px',
+            top: y + 'px'
+        });
+    });
+    
+    $(document).on('mouseup', function(e) {
+        if (isDragging && currentCard) {
+            // Salvar nova posição
+            const cardId = currentCard.data('card-id');
+            const position = currentCard.position();
+            
+            updateCardPosition(cardId, position.left, position.top);
+            
+            currentCard.css('z-index', '');
+            isDragging = false;
+            currentCard = null;
+        }
+    });
+}
+
+function addIdea() {
+    const text = $('#newIdeaText').val().trim();
+    if (!text) {
+        showAlert('Digite uma ideia primeiro!', 'warning');
+        return;
+    }
+    
+    const data = {
+        session_id: {{ session.id }},
+        text: text,
+        color: '#ffd700',
+        position_x: Math.random() * 400 + 50,
+        position_y: Math.random() * 300 + 50,
+        is_ai_generated: false
+    };
+    
+    $.ajax({
+        url: '{{ url_for("brainstorm.add_card") }}',
+        method: 'POST',
+        data: JSON.stringify(data),
+        success: function(response) {
+            if (response.success) {
+                addCardToCanvas(response.card);
+                $('#newIdeaText').val('');
+                showAlert('Ideia adicionada com sucesso!', 'success');
+            } else {
+                showAlert('Erro ao adicionar ideia: ' + response.error, 'danger');
+            }
+        },
+        error: function() {
+            showAlert('Erro de conexão!', 'danger');
+        }
+    });
+}
+
+function getSuggestions() {
+    const button = $('button:contains("Obter Sugestões da IA")');
+    const loading = button.find('.loading');
+    
+    showLoading(loading);
+    button.prop('disabled', true);
+    
+    $.ajax({
+        url: '{{ url_for("brainstorm.get_suggestions") }}',
+        method: 'POST',
+        data: JSON.stringify({ session_id: {{ session.id }} }),
+        success: function(response) {
+            if (response.success && response.cards) {
+                response.cards.forEach(card => addCardToCanvas(card));
+                showAlert(`${response.cards.length} sugestões adicionadas!`, 'success');
+            } else {
+                showAlert('Erro ao obter sugestões: ' + response.error, 'danger');
+            }
+        },
+        error: function() {
+            showAlert('Erro de conexão!', 'danger');
+        },
+        complete: function() {
+            hideLoading(loading);
+            button.prop('disabled', false);
+        }
+    });
+}
+
+function addCardToCanvas(card) {
+    const cardHtml = `
+        <div class="card-idea ${card.is_ai_generated ? 'ai-generated' : ''}" 
+             data-card-id="${card.id}"
+             style="left: ${card.position_x}px; top: ${card.position_y}px; background-color: ${card.color};">
+            <div class="d-flex justify-content-between align-items-start">
+                <span class="flex-grow-1">${card.text}</span>
+                <button class="btn btn-sm btn-outline-danger ms-2" onclick="deleteCard(${card.id})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            ${card.is_ai_generated ? '<small class="text-muted"><i class="fas fa-robot"></i> IA</small>' : ''}
+        </div>
+    `;
+    
+    $('#ideasCanvas').append(cardHtml);
+}
+
+function deleteCard(cardId) {
+    if (!confirm('Tem certeza que deseja remover esta ideia?')) {
+        return;
+    }
+    
+    $.ajax({
+        url: '{{ url_for("brainstorm.delete_card") }}',
+        method: 'POST',
+        data: JSON.stringify({ card_id: cardId }),
+        success: function(response) {
+            if (response.success) {
+                $(`.card-idea[data-card-id="${cardId}"]`).fadeOut(300, function() {
+                    $(this).remove();
+                });
+                showAlert('Ideia removida!', 'info');
+            } else {
+                showAlert('Erro ao remover ideia: ' + response.error, 'danger');
+            }
+        },
+        error: function() {
+            showAlert('Erro de conexão!', 'danger');
+        }
+    });
+}
+
+function updateCardPosition(cardId, x, y) {
+    $.ajax({
+        url: '{{ url_for("brainstorm.update_card_position") }}',
+        method: 'POST',
+        data: JSON.stringify({
+            card_id: cardId,
+            position_x: x,
+            position_y: y
+        })
+    });
+}
+
+function clearCanvas() {
+    if (!confirm('Tem certeza que deseja remover todas as ideias?')) {
+        return;
+    }
+    
+    $('.card-idea').each(function() {
+        const cardId = $(this).data('card-id');
+        deleteCard(cardId);
+    });
+}
+
+function finishBrainstorming() {
+    const cardCount = $('.card-idea').length;
+    if (cardCount === 0) {
+        if (!confirm('Você não adicionou nenhuma ideia. Deseja continuar mesmo assim?')) {
+            return;
+        }
+    }
+    
+    $.ajax({
+        url: '{{ url_for("brainstorm.finish_session") }}',
+        method: 'POST',
+        data: JSON.stringify({ session_id: {{ session.id }} }),
+        success: function(response) {
+            if (response.success) {
+                window.location.href = response.redirect_url;
+            } else {
+                showAlert('Erro ao finalizar: ' + response.error, 'danger');
+            }
+        },
+        error: function() {
+            showAlert('Erro de conexão!', 'danger');
+        }
+    });
+}
+</script>
+{% endblock %}

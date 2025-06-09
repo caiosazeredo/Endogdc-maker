@@ -1,0 +1,262 @@
+<!-- templates/socratic/index.html - Módulo Socrático -->
+{% extends "base.html" %}
+
+{% block title %}Agente Socrático - Sistema de Design de Jogos Educativos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2>
+                    <i class="fas fa-question-circle text-info"></i> 
+                    Reflexão Socrática
+                </h2>
+                <p class="text-muted">Analise criticamente suas ideias através do método socrático</p>
+            </div>
+            <div>
+                <span class="badge bg-info">Sessão #{{ session.id }}</span>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Ideas Summary -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-lightbulb"></i> 
+                            Ideias do Brainstorming ({{ cards|length }})
+                        </h6>
+                    </div>
+                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                        {% if cards %}
+                            {% for card in cards %}
+                            <div class="mb-2 p-2 border rounded {% if card.is_ai_generated %}border-primary{% endif %}">
+                                <small>{{ card.text }}</small>
+                                {% if card.is_ai_generated %}
+                                    <br><span class="badge badge-sm bg-primary">IA</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center">Nenhuma ideia encontrada</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Socratic Questions -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-brain"></i> 
+                            Questões Socráticas
+                        </h6>
+                        <button class="btn btn-sm btn-success" onclick="getSuggestions()">
+                            <i class="fas fa-robot"></i> 
+                            Obter Sugestões da IA
+                            <span class="spinner-border spinner-border-sm loading ms-2" role="status"></span>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <form id="socraticForm">
+                            <!-- Problema -->
+                            <div class="mb-4">
+                                <label for="problem" class="form-label">
+                                    <strong>1. Identificação do Problema</strong>
+                                    <small class="text-muted d-block">Qual é o principal problema educacional que suas ideias tentam resolver?</small>
+                                </label>
+                                <textarea class="form-control" 
+                                          id="problem" 
+                                          name="problem" 
+                                          rows="3" 
+                                          placeholder="Descreva o problema educacional principal..."
+                                          required>{% if answers %}{{ answers.problem }}{% endif %}</textarea>
+                            </div>
+
+                            <!-- Justificação -->
+                            <div class="mb-4">
+                                <label for="justification" class="form-label">
+                                    <strong>2. Justificação</strong>
+                                    <small class="text-muted d-block">Por que suas abordagens são adequadas para resolver o problema identificado?</small>
+                                </label>
+                                <textarea class="form-control" 
+                                          id="justification" 
+                                          name="justification" 
+                                          rows="3" 
+                                          placeholder="Justifique suas escolhas de design...">{% if answers %}{{ answers.justification }}{% endif %}</textarea>
+                            </div>
+
+                            <!-- Impacto -->
+                            <div class="mb-4">
+                                <label for="impact" class="form-label">
+                                    <strong>3. Impacto Educacional</strong>
+                                    <small class="text-muted d-block">Qual seria o impacto educacional esperado na aprendizagem dos estudantes?</small>
+                                </label>
+                                <textarea class="form-control" 
+                                          id="impact" 
+                                          name="impact" 
+                                          rows="3" 
+                                          placeholder="Descreva o impacto esperado...">{% if answers %}{{ answers.impact }}{% endif %}</textarea>
+                            </div>
+
+                            <!-- Motivação -->
+                            <div class="mb-4">
+                                <label for="motivation" class="form-label">
+                                    <strong>4. Motivação dos Estudantes</strong>
+                                    <small class="text-muted d-block">O que motivaria os estudantes a se engajarem com estes jogos?</small>
+                                </label>
+                                <textarea class="form-control" 
+                                          id="motivation" 
+                                          name="motivation" 
+                                          rows="3" 
+                                          placeholder="Identifique elementos motivacionais...">{% if answers %}{{ answers.motivation }}{% endif %}</textarea>
+                            </div>
+
+                            <!-- Buttons -->
+                            <div class="text-end">
+                                <button type="button" class="btn btn-outline-secondary me-2" onclick="skipModule()">
+                                    <i class="fas fa-forward"></i> Pular
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Salvar e Continuar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Tips -->
+                <div class="card mt-3">
+                    <div class="card-body">
+                        <h6><i class="fas fa-info-circle"></i> Dicas para reflexão</h6>
+                        <ul class="mb-0 small">
+                            <li><strong>Problema:</strong> Seja específico sobre qual dificuldade de aprendizagem você quer abordar</li>
+                            <li><strong>Justificação:</strong> Explique por que os jogos são uma solução adequada</li>
+                            <li><strong>Impacto:</strong> Pense em resultados mensuráveis de aprendizagem</li>
+                            <li><strong>Motivação:</strong> Considere elementos como diversão, desafio, recompensas</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('#socraticForm').on('submit', function(e) {
+        e.preventDefault();
+        saveAnswers();
+    });
+});
+
+function getSuggestions() {
+    const button = $('button:contains("Obter Sugestões da IA")');
+    const loading = button.find('.loading');
+    
+    showLoading(loading);
+    button.prop('disabled', true);
+    
+    $.ajax({
+        url: '{{ url_for("socratic.get_suggestions") }}',
+        method: 'POST',
+        data: JSON.stringify({ session_id: {{ session.id }} }),
+        success: function(response) {
+            if (response.success && response.suggestions) {
+                // Preencher os campos com as sugestões
+                if (response.suggestions.problem) {
+                    $('#problem').val(response.suggestions.problem);
+                }
+                if (response.suggestions.justification) {
+                    $('#justification').val(response.suggestions.justification);
+                }
+                if (response.suggestions.impact) {
+                    $('#impact').val(response.suggestions.impact);
+                }
+                if (response.suggestions.motivation) {
+                    $('#motivation').val(response.suggestions.motivation);
+                }
+                
+                showAlert('Sugestões geradas com sucesso! Você pode editar as respostas conforme necessário.', 'success');
+            } else {
+                showAlert('Erro ao obter sugestões: ' + (response.error || 'Erro desconhecido'), 'danger');
+            }
+        },
+        error: function(xhr) {
+            let errorMsg = 'Erro de conexão!';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMsg = xhr.responseJSON.error;
+            }
+            showAlert(errorMsg, 'danger');
+        },
+        complete: function() {
+            hideLoading(loading);
+            button.prop('disabled', false);
+        }
+    });
+}
+
+function saveAnswers() {
+    const formData = {
+        session_id: {{ session.id }},
+        problem: $('#problem').val().trim(),
+        justification: $('#justification').val().trim(),
+        impact: $('#impact').val().trim(),
+        motivation: $('#motivation').val().trim()
+    };
+    
+    // Validação básica
+    if (!formData.problem) {
+        showAlert('O campo "Problema" é obrigatório!', 'warning');
+        $('#problem').focus();
+        return;
+    }
+    
+    $.ajax({
+        url: '{{ url_for("socratic.save_answers") }}',
+        method: 'POST',
+        data: JSON.stringify(formData),
+        success: function(response) {
+            if (response.success) {
+                showAlert('Respostas salvas com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.href = response.redirect_url;
+                }, 1500);
+            } else {
+                showAlert('Erro ao salvar: ' + response.error, 'danger');
+            }
+        },
+        error: function() {
+            showAlert('Erro de conexão!', 'danger');
+        }
+    });
+}
+
+function skipModule() {
+    if (!confirm('Tem certeza que deseja pular o módulo socrático? Isso pode impactar a qualidade das próximas etapas.')) {
+        return;
+    }
+    
+    $.ajax({
+        url: '{{ url_for("socratic.skip") }}',
+        method: 'POST',
+        data: JSON.stringify({ session_id: {{ session.id }} }),
+        success: function(response) {
+            if (response.success) {
+                window.location.href = response.redirect_url;
+            } else {
+                showAlert('Erro ao pular módulo: ' + response.error, 'danger');
+            }
+        },
+        error: function() {
+            showAlert('Erro de conexão!', 'danger');
+        }
+    });
+}
+</script>
+{% endblock %}
