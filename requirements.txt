@@ -1,4 +1,4 @@
-# requirements.txt - Dependências Python
+# requirements.txt - Dependências Python (raiz do projeto)
 
 # Flask e extensões
 Flask==2.3.3
@@ -12,8 +12,10 @@ cryptography==41.0.4
 # Requests para chamadas HTTP (Groq API e Gemini API)
 requests==2.31.0
 
-# Utilitários
+# Carregar variáveis de ambiente
 python-dotenv==1.0.0
+
+# Utilitários
 Werkzeug==2.3.7
 Jinja2==3.1.2
 
